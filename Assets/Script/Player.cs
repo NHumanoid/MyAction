@@ -1,4 +1,5 @@
 using NUnit.Framework.Interfaces;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -27,6 +28,7 @@ namespace MyAction
         private bool wDown;
         private bool jDown;
         private bool iDown;
+        private bool fDown;
 
         bool sDown1;
         bool sDown2;
@@ -35,6 +37,7 @@ namespace MyAction
         private bool isJump;
         private bool isDodge;
         private bool isSwap;
+        private bool isFireReady = true;
 
         Vector3 moveVec;
         Vector3 dodgeVec;
@@ -43,10 +46,12 @@ namespace MyAction
         [SerializeField]
         GameObject nearObject;
         [SerializeField]
-        GameObject equipWeapon;
+        Weapon equipWeapon;
         Animator anim;
         [SerializeField]
-        private int equipWeaponIndex;
+        private int equipWeaponIndex = -1;
+        [SerializeField]
+        float fireDelay;
         void Awake()
         {
             // GetComponentInChildren : 자식 오브젝트에서 컴포넌트를 찾음
@@ -62,6 +67,7 @@ namespace MyAction
             Dodge();
             Interation();
             Swap();
+            Attack();
         }
 
         void GetInput() 
@@ -70,6 +76,7 @@ namespace MyAction
             vAxis = Input.GetAxisRaw("Vertical"); // 세로축 입력
             wDown = Input.GetButton("Walk"); // 걷기 버튼 입력
             jDown = Input.GetButtonDown("Jump"); // 점프 버튼 입력
+            fDown = Input.GetButton("Fire1"); // 공격 버튼 입력
             iDown = Input.GetButtonDown("Interation"); // 점프 버튼 입력
             sDown1 = Input.GetButtonDown("Swap1"); // 무기 교체 버튼 입력
             sDown2 = Input.GetButtonDown("Swap2"); // 무기 교체 버튼 입력
@@ -81,7 +88,7 @@ namespace MyAction
             moveVec = new Vector3(hAxis, 0, vAxis).normalized; // 이동 벡터
 
             if (isDodge) { moveVec = dodgeVec; }
-            if (isSwap) { moveVec = Vector3.zero; }
+            if (isSwap || !isFireReady) { moveVec = Vector3.zero; }
             transform.position += moveVec * speed * (wDown ? 0.5f : 1f) * Time.deltaTime; // 이동
             // 먼저 SetBool을 통해 애니메이션 파라미터를 설정
             anim.SetBool("IsRun", moveVec != Vector3.zero); // 이동 애니메이션 재생
@@ -105,6 +112,23 @@ namespace MyAction
                 isJump = true; // 점프 애니메이션 재생
             }
         }
+
+        void Attack() 
+        {
+            if (equipWeapon == null)
+                return;
+
+            fireDelay += Time.deltaTime;
+            isFireReady = equipWeapon.rate < fireDelay;
+
+            if (fDown && isFireReady && !isDodge && !isSwap)
+            {
+                equipWeapon.Use();
+                anim.SetTrigger(equipWeapon.type == Weapon.Type.Melee ? "DoSwing" : "DoShot");
+                fireDelay = 0;
+            }
+        }
+
         void Dodge() //회피관련 함수입니다.
         {
             if (jDown && moveVec != Vector3.zero && !isJump && !isDodge && !isSwap)
@@ -138,10 +162,10 @@ namespace MyAction
 
             if ((sDown1 || sDown2 || sDown3) && !isJump && !isDodge) 
             {
-                if (equipWeapon != null) { equipWeapon.SetActive(false); } // 유효하지 않은 인덱스면 종료, 현재 무기 비활성화
+                if (equipWeapon != null) { equipWeapon.gameObject.SetActive(false); } // 유효하지 않은 인덱스면 종료, 현재 무기 비활성화
                 equipWeaponIndex = weaponIndex;
-                equipWeapon = weapons[weaponIndex];
-                equipWeapon.SetActive(true); // 현재 무기 비활성화
+                equipWeapon = weapons[weaponIndex].GetComponent<Weapon>();
+                equipWeapon.gameObject.SetActive(true); // 현재 무기 비활성화
 
                 anim.SetTrigger("DoSwap");
                 isSwap = true; // 무기 교체 애니메이션 재생
@@ -195,6 +219,7 @@ namespace MyAction
                         if (coin > maxCoin) { coin = maxCoin; }
                         break;
                     case Item.Type.Grenade:
+                        grenades[hasGrenades].SetActive(true);
                         hasGrenades += item.value;
                         if (hasGrenades > maxHasGrenades) { hasGrenades = maxHasGrenades; }
                         break;
