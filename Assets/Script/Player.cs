@@ -48,7 +48,6 @@ namespace MyAction
         [SerializeField]
         Weapon equipWeapon;
         Animator anim;
-        [SerializeField]
         private int equipWeaponIndex = -1;
         [SerializeField]
         float fireDelay;

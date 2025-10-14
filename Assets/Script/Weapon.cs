@@ -20,12 +20,12 @@ namespace MyAction
         {
             if (type == Type.Melee) 
             { 
-                StopCoroutine("Swing");
-                StartCoroutine("Swing"); 
+                StopCoroutine(Swing());
+                StartCoroutine(Swing()); 
             }
             else if (type == Type.Range)
             {
-                StartCoroutine("Shot");
+                StartCoroutine(Shot());
             }
         }
 
